@@ -1,0 +1,69 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "downloadAttachments": false
+      },
+      "name": "IMAP Email",
+      "type": "n8n-nodes-base.imap",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const subject = $json.subject || ''; let tipo='Regular'; if(subject.includes('[VIP]')) tipo='VIP'; if(subject.includes('[Interno]')) tipo='Interno'; return [{json:{tipoCliente:tipo}}];"
+      },
+      "name": "Detectar TipoCliente",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "propertyName": "tipoCliente",
+        "rules": [
+          { "value": "VIP", "output": 1 },
+          { "value": "Regular", "output": 2 },
+          { "value": "Interno", "output": 3 }
+        ]
+      },
+      "name": "Switch TipoCliente",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": { "channel": "soporte-vip", "text": "Nuevo ticket VIP recibido" },
+      "name": "Notificar Slack VIP",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": { "toEmail": "cliente@example.com", "subject": "Ticket recibido", "text": "Gracias por su consulta." },
+      "name": "Email Regular",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": { "url": "https://intranet.local/api/tickets", "options": {} },
+      "name": "Webhook Interno",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "IMAP Email": { "main": [[{ "node": "Detectar TipoCliente", "type": "main", "index": 0 }]] },
+    "Detectar TipoCliente": { "main": [[{ "node": "Switch TipoCliente", "type": "main", "index": 0 }]] },
+    "Switch TipoCliente": {
+      "main": [
+        [{ "node": "Notificar Slack VIP", "type": "main", "index": 0 }],
+        [{ "node": "Email Regular", "type": "main", "index": 0 }],
+        [{ "node": "Webhook Interno", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}
